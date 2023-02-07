@@ -1,52 +1,75 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request
 import sqlite3
-import os
 
 app = Flask(__name__)
 
+def get_db_connection():
+    return sqlite3.connect("bank.db")
 
-conn = sqlite3.connect("bank.bd")
-
-
-cursor = conn.cursor()
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS accounts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    balance REAL NOT NULL
-);
-""")
-conn.commit()
-
-@app.route('/accounts', methods=['GET'])
-def get_accounts():
-    cursor.execute("SELECT * FROM accounts")
-    accounts = cursor.fetchall()
-    return jsonify([{'id': account[0], 'name': account[1], 'balance': account[2]} for account in accounts]), 200
-
-@app.route('/account-create', methods=['POST'])
-def create_account():
-    data = request.get_json()
-    name = data.get('name')
-    balance = data.get('balance')
-    cursor.execute("INSERT INTO accounts (name, balance) VALUES (?, ?)", (name, balance))
+@app.route("/create", methods=["POST"])
+def create():
+    conn = get_db_connection()
+    c = conn.cursor()
+    name = request.form.get("name")
+    initial_balance = request.form.get("balance")
+    c.execute("INSERT INTO accounts (name, balance) VALUES (?,?)", (name, initial_balance))
     conn.commit()
-    return jsonify({'message': 'Account created'}), 201
+    conn.close()
+    return f"Account created for {name} with initial balance of {initial_balance}"
 
+@app.route("/balance/<name>", methods=["GET"])
+def balance(name):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT balance FROM accounts WHERE name=?", (name,))
+    result = c.fetchone()
+    conn.close()
+    if result:
+        return str(result[0])
+    else:
+        return "No account found with the name " + name
 
-@app.route('/accounts/<int:account_id>', methods=['PUT'])
-def update_balance(account_id):
-    data = request.get_json()
-    balance = data.get('balance')
-    cursor.execute("UPDATE accounts SET balance=? WHERE id=?", (balance, account_id))
+@app.route("/deposit", methods=["POST"])
+def deposit():
+    conn = get_db_connection()
+    c = conn.cursor()
+    name = request.form.get("name")
+    amount = request.form.get("amount")
+    c.execute("UPDATE accounts SET balance = balance + ? WHERE name = ?", (amount, name))
     conn.commit()
-    return jsonify({'message': 'Balance updated'}), 200
+    conn.close()
+    return f"Deposited {amount} to the account of {name}"
 
+@app.route("/withdraw", methods=["POST"])
+def withdraw():
+    conn = get_db_connection()
+    c = conn.cursor()
+    name = request.form.get("name")
+    amount = request.form.get("amount")
+    c.execute("SELECT balance FROM accounts WHERE name = ?", (name,))
+    result = c.fetchone()
+    if result:
+        current_balance = result[0]
+        if amount > current_balance:
+            return f"Insufficient balance in the account of {name}"
+        else:
+            c.execute("UPDATE accounts SET balance = balance - ? WHERE name = ?", (amount, name))
+            conn.commit()
+            conn.close()
+            return f"Withdrew {amount} from the account of {name}"
+    else:
+        conn.close()
+        return "No account found with the name " + name
 
-@app.route('/deleteAccount/<int:account_id>', methods=['DELETE'])
-def delete_account(account_id):
-    cursor.execute("DELETE FROM accounts WHERE id=?", (account_id,))
+if __name__ == "__main__":
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS accounts (
+            name TEXT PRIMARY KEY,
+            balance INTEGER NOT NULL
+        )
+    """)
     conn.commit()
-
-if __name__ == '__main__':
-    app.run(debug=True, port=8080)
+    conn.close()
+    app.run(debug=True)
