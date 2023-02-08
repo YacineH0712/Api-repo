@@ -6,22 +6,23 @@ app = Flask(__name__)
 def get_db_connection():
     return sqlite3.connect("bank.db")
 
-@app.route("/api/v1/create", methods=["POST"])
+@app.route('/api/v1/create', methods=["POST"])
 def create():
     conn = get_db_connection()
     c = conn.cursor()
-    name = request.form.get("name")
-    balance = request.form.get("balance")
-    c.execute("INSERT INTO accounts (name, balance) VALUES (?,?)", (name, balance))
+    name = request.json['name']
+    amount = request.json['amount']
+    c.execute("INSERT INTO accounts (name, amount) VALUES (?,?)", (name, amount))
     conn.commit()
     conn.close()
-    return f"Account created for {name} with initial balance of {balance}"
+    return f"Account created for {name} with initial amount of {amount}"
 
-@app.route("/api/v1/balance/<name>", methods=["GET"])
-def balance(name):
+@app.route('/api/v1/amount', methods=["GET"])
+def amount():
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("SELECT balance FROM accounts WHERE name=?", (name,))
+    name = request.args.get('name')
+    c.execute("SELECT amount FROM accounts WHERE name=?", (name,))
     result = c.fetchone()
     conn.close()
     if result:
@@ -33,9 +34,9 @@ def balance(name):
 def deposit():
     conn = get_db_connection()
     c = conn.cursor()
-    name = request.form.get("name")
-    amount = request.form.get("amount")
-    c.execute("UPDATE accounts SET balance = balance + ? WHERE name = ?", (amount, name))
+    name = request.json['name']
+    amount = request.json['amount']
+    c.execute("UPDATE accounts SET amount = amount + ? WHERE name = ?", (amount, name))
     conn.commit()
     conn.close()
     return f"Deposited {amount} to the account of {name}"
@@ -44,16 +45,16 @@ def deposit():
 def withdraw():
     conn = get_db_connection()
     c = conn.cursor()
-    name = request.form.get("name")
-    amount = request.form.get("amount")
-    c.execute("SELECT balance FROM accounts WHERE name = ?", (name,))
+    name = request.json['name']
+    amount = request.json['amount']
+    c.execute("SELECT amount FROM accounts WHERE name = ?", (name,))
     result = c.fetchone()
     if result:
-        current_balance = result[0]
-        if amount > current_balance:
-            return f"Insufficient balance in the account of {name}"
+        current_amount = result[0]
+        if amount > current_amount:
+            return f"Insufficient amount in the account of {name}"
         else:
-            c.execute("UPDATE accounts SET balance = balance - ? WHERE name = ?", (amount, name))
+            c.execute("UPDATE accounts SET amount = amount - ? WHERE name = ?", (amount, name))
             conn.commit()
             conn.close()
             return f"Withdrew {amount} from the account of {name}"
@@ -67,7 +68,7 @@ if __name__ == "__main__":
     c.execute("""
         CREATE TABLE IF NOT EXISTS accounts (
             name TEXT PRIMARY KEY,
-            balance INTEGER NOT NULL
+            amount INTEGER 
         )
     """)
     conn.commit()
