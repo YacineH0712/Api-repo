@@ -8,6 +8,10 @@ db = SQLAlchemy(app)
 class Account(db.Model):
     name = db.Column(db.String, primary_key=True)
     amount = db.Column(db.Integer)
+    
+@app.route('/', methods=['GET'])
+def home():
+   return "<h1>Annuaire Internet</h1> <p API mettant à disposition des données sur les comptes bancaires.</p>"
 
 @app.route('/api/v1/create', methods=["POST"])
 def create():
