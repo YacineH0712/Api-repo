@@ -8,11 +8,11 @@ db = SQLAlchemy(app)
 class Account(db.Model):
     name = db.Column(db.String, primary_key=True)
     amount = db.Column(db.Integer)
-    
+#Default route  
 @app.route('/', methods=['GET'])
 def home():
    return "<h1>Annuaire Internet</h1> <p API mettant à disposition des données sur les comptes bancaires.</p>"
-
+#Create-account
 @app.route('/api/v1/create', methods=["POST"])
 def create():
     name = request.json['name']
@@ -22,6 +22,7 @@ def create():
     db.session.commit()
     return f"Account created for {name} with initial amount of {amount}"
 
+#Get amount of one count by giving his name
 @app.route('/api/v1/amount', methods=["GET"])
 def amount():
     name = request.args.get('name')
@@ -42,7 +43,7 @@ def deposit():
         return f"Deposited {amount} to the account of {name}"
     else:
         return "No account found with the name " + name
-
+#To withdraw money from an account
 @app.route("/api/v1/withdraw", methods=["POST"])
 def withdraw():
     name = request.json['name']
@@ -58,7 +59,15 @@ def withdraw():
     else:
         return "No account found with the name " + name
 
+#To use the api localy
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
         app.run(debug=True)
+        
+       
+ #To deploy the api on AWS we must use this app.run command     
+ #if __name__ == "__main__":
+    #with app.app_context():
+        #db.create_all()
+        #app.run(debug=True , host='0.0.0.0', port=5000) 
