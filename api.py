@@ -22,7 +22,7 @@ def create():
     db.session.commit()
     return f"Account created for {name} with initial amount of {amount}"
 
-#Get amount of one count by giving his name
+#Get amount of one account by giving his name
 @app.route('/api/v1/amount', methods=["GET"])
 def amount():
     name = request.args.get('name')
@@ -31,7 +31,7 @@ def amount():
         return str(account.amount)
     else:
         return "No account found with the name " + name
-
+#send an amount of money to an account
 @app.route("/api/v1/deposit", methods=["POST"])
 def deposit():
     name = request.json['name']
